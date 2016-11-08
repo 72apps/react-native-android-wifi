@@ -19,7 +19,10 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.content.Context;
+import android.content.IntentFilter;
+
 import android.os.Bundle;
+import android.telecom.Call;
 import android.widget.Toast;
 import java.util.List;
 
@@ -27,15 +30,27 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class AndroidWifiModule extends ReactContextBaseJavaModule {
+public class AndroidWifiModule extends ReactContextBaseJavaModule implements ScanResultsAvailable{
 
 	//WifiManager Instance
 	WifiManager wifi;
 
+	//private ReactApplicationContext mreactContext;
+
+	private Callback scanSuccessCallback;
+	private Callback scanErrorCallback;
+
  	//Constructor
 	public AndroidWifiModule(ReactApplicationContext reactContext) {
 		super(reactContext);
+		//mreactContext = reactContext;
+
 		wifi = (WifiManager)reactContext.getSystemService(Context.WIFI_SERVICE);
+
+		IntentFilter intentFilter = new IntentFilter();
+		intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+		reactContext.registerReceiver(new ScanBroadcastReceiver(this), intentFilter);
+
 	}
 
   	//Name for module register to use:
@@ -44,10 +59,56 @@ public class AndroidWifiModule extends ReactContextBaseJavaModule {
 		return "AndroidWifiModule";
 	}
 
+
+	@ReactMethod
+	public void scan(Callback successCallback, Callback errorCallback) {
+
+		scanSuccessCallback = successCallback;
+		scanErrorCallback = errorCallback;
+		wifi.startScan();
+	}
+
+	@Override
+	public void onReceiveScanResults() {
+		try {
+			JSONArray wifiArray = getScanResults();
+			scanSuccessCallback.invoke(wifiArray.toString());
+		} catch(Exception e) {
+			scanErrorCallback.invoke(e.getMessage());
+		}
+	}
+
+	private JSONArray getScanResults() throws JSONException {
+
+		List < ScanResult > results = wifi.getScanResults();
+		JSONArray wifiArray = new JSONArray();
+
+		for (ScanResult result: results) {
+			JSONObject wifiObject = new JSONObject();
+			if(!result.SSID.equals("")){
+				wifiObject.put("SSID", result.SSID);
+				wifiObject.put("BSSID", result.BSSID);
+				wifiObject.put("capabilities", result.capabilities);
+				wifiObject.put("frequency", result.frequency);
+				wifiObject.put("level", result.level);
+				wifiObject.put("timestamp", result.timestamp);
+				//Other fields not added
+				//wifiObject.put("operatorFriendlyName", result.operatorFriendlyName);
+				//wifiObject.put("venueName", result.venueName);
+				//wifiObject.put("centerFreq0", result.centerFreq0);
+				//wifiObject.put("centerFreq1", result.centerFreq1);
+				//wifiObject.put("channelWidth", result.channelWidth);
+				wifiArray.put(wifiObject);
+			}
+		}
+		return wifiArray;
+	}
+
 	//Method to load wifi list into string via Callback. Returns a stringified JSONArray
   	@ReactMethod
 	public void loadWifiList(Callback successCallback, Callback errorCallback) {
 		try {
+
 			List < ScanResult > results = wifi.getScanResults();
 			JSONArray wifiArray = new JSONArray();
 
