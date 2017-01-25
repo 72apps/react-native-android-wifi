@@ -61,20 +61,22 @@ public class AndroidWifiModule extends ReactContextBaseJavaModule implements Sca
 
 
 	@ReactMethod
-	public void scan(Callback scanCallback) {
+	public void scan(Callback callback) {
 
-		scanCallback = scanCallback;
+		scanCallback = callback;
 		wifi.startScan();
 	}
 
 	@Override
 	public void onReceiveScanResults() {
-		try {
-			JSONArray wifiArray = getScanResults();
-			scanCallback.invoke(null,wifiArray.toString());
-		} catch(Exception e) {
-			scanCallback.invoke(e.getMessage(),null);
-		}
+        if(callback != null) {
+            try {
+                JSONArray wifiArray = getScanResults();
+                scanCallback.invoke(null,wifiArray.toString());
+            } catch(Exception e) {
+                scanCallback.invoke(e.getMessage(),null);
+            }            
+        }
 	}
 
 	private JSONArray getScanResults() throws JSONException {
