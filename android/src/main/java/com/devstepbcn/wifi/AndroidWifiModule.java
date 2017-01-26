@@ -75,7 +75,8 @@ public class AndroidWifiModule extends ReactContextBaseJavaModule implements Sca
                 scanCallback.invoke(null,wifiArray.toString());
             } catch(Exception e) {
                 scanCallback.invoke(e.getMessage(),null);
-            }            
+            }
+            scanCallback = null;
         }
 	}
 
